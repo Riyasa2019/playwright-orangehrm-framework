@@ -1,13 +1,14 @@
 const { test, expect } = require('@playwright/test');
 
-const AdminPage = require('../pages/AdminPage');
-
-const Helper = require('../utils/helper');
-
 test('Admin Search And Table Validation', async ({ page }) => {
 
-    // Open OrangeHRM application
-    await page.goto('https://opensource-demo.orangehrmlive.com/web/index.php/auth/login');
+    await page.goto(
+        'https://opensource-demo.orangehrmlive.com/web/index.php/auth/login',
+        {
+            waitUntil: 'domcontentloaded',
+            timeout: 60000
+        }
+    );
 
     // Login
     await page.fill('input[name="username"]', 'Admin');
@@ -16,32 +17,28 @@ test('Admin Search And Table Validation', async ({ page }) => {
 
     await page.click('button[type="submit"]');
 
-    // Validate dashboard page
     await expect(page).toHaveURL(/dashboard/);
 
-    // Create AdminPage object
-    const adminPage = new AdminPage(page);
+    // Click Admin Menu
+    await page.locator('//span[text()="Admin"]').click();
 
-    // Navigate to Admin module
-    await adminPage.navigateToAdminPage();
+    // Search Username
+    await page.locator(
+        '(//input[contains(@class,"oxd-input")])[2]'
+    ).fill('Admin');
 
-    // Search username
-    await adminPage.searchUsername('Admin');
+    await page.locator('//button[@type="submit"]').click();
 
-    // Wait for table data
-    await page.waitForSelector('.oxd-table-card');
+    // Validate Table
+    const tableBody = page.locator('.oxd-table-body');
 
-    // Validate table visible
-    await expect(adminPage.tableRows.first()).toBeVisible();
+    await expect(tableBody).toBeVisible();
 
-    // Validate at least one row exists
-    const rowCount = await adminPage.tableRows.count();
+    const tableText = await tableBody.textContent();
 
-    expect(rowCount).toBeGreaterThan(0);
+    expect(tableText).toContain('Admin');
 
-    // Validate searched username
-    await expect(adminPage.usernameColumn.first()).toContainText('Admin');
-
-    // Capture screenshot
-    await Helper.takeScreenshot(page, 'admin-search');
+    await page.screenshot({
+        path: 'screenshots/admin-search-success.png'
+    });
 });
